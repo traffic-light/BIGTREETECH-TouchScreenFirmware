@@ -1,7 +1,7 @@
 #ifndef _LCD_H_
 #define _LCD_H_
 
-#include "stdint.h"
+#include <stdint.h>
 #include "variants.h"
 
 #ifdef STM32_HAS_FSMC
@@ -12,7 +12,7 @@
     volatile uint16_t LCD_RAM;
   } LCD_TypeDef;
 
-  #define LCD_BASE        ((uint32_t)(0x60000000 | 0x00FFFFFE))  	//1111 1111 1111 1111 1111 1110
+  #define LCD_BASE        ((uint32_t)(0x60000000 | 0x00FFFFFE))  // 1111 1111 1111 1111 1111 1110
   #define LCD             ((LCD_TypeDef *) LCD_BASE)
 
   #define LCD_WR_REG(regval) do{ LCD->LCD_REG = regval; }while(0)

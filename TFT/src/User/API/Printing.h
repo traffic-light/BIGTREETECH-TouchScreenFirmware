@@ -9,81 +9,105 @@ extern "C" {
 #include "variants.h"
 #include "ff.h"
 
-
 #ifndef M27_WATCH_OTHER_SOURCES
-#define M27_WATCH_OTHER_SOURCES    false
+  #define M27_WATCH_OTHER_SOURCES false
 #endif
 
 #ifndef M27_REFRESH
-#define M27_REFRESH   3
+  #define M27_REFRESH 3
 #endif
 
 #ifdef RAPID_SERIAL_COMM
-#define rapid_serial_loop()  loopBackEnd()
-#define rapid_serial_comm()  if(isPrinting() == true && infoSettings.serial_alwaysOn != 1){loopBackEnd();}
+  #define RAPID_SERIAL_LOOP() loopBackEnd()
+  #define RAPID_PRINTING_COMM() if (isPrinting() == true && infoSettings.serial_alwaysOn != 1) {loopBackEnd();}
 #else
-#define rapid_serial_loop()
-#define rapid_serial_comm()
+  #define RAPID_SERIAL_LOOP()
+  #define RAPID_PRINTING_COMM()
 #endif
 
+#define SUMMARY_NAME_LEN 26  // max character length to copy from name buffer
+
+typedef enum
+{
+  PAUSE_NORMAL = 0,
+  PAUSE_M0,
+  PAUSE_EXTERNAL,
+} PAUSE_TYPE;
 
 typedef struct
 {
-  FIL file;
+  // data
+  char name[SUMMARY_NAME_LEN + 1];
+  uint32_t time;
+  float length;
+  float weight;
+  float cost;
+} PRINT_SUMMARY;
 
-  uint32_t time; // Printed time in sec
-  uint32_t size; // Gcode file total size
-  uint32_t cur;  // Gcode has printed file size
-  uint8_t  progress;
-  bool     printing; // 1 means printing, 0 means idle
-  bool     pause;    // 1 means paused
-  bool     m0_pause; // pause triggered through M0/M1 gcode
-  bool     runout;   // 1: runout in printing, 0: idle
-  bool     model_icon; // 1: model preview icon exist, 0: not exist
-}PRINTING;
+extern PRINT_SUMMARY infoPrintSummary;
 
-extern PRINTING infoPrinting;
+bool isHostPrinting(void);  // condition callback for loopProcessToCondition()
 
-bool isPrinting(void);
-bool isPause(void);
-bool isM0_Pause(void);
+void setRunoutAlarmTrue(void);
+void setRunoutAlarmFalse(void);
+bool getRunoutAlarm(void);
+
 void breakAndContinue(void);
 void resumeAndPurge(void);
 void resumeAndContinue(void);
-void setPrintingTime(uint32_t RTtime);
 
-void exitPrinting(void);
-void endPrinting(void);
-void completePrinting(void);
-void abortPrinting(void);
-uint8_t *getCurGcodeName(char *path);
-void sendPrintCodes(uint8_t index);
+void setPrintTime(uint32_t elapsedTime);
+uint32_t getPrintTime(void);
+void getPrintTimeDetail(uint8_t * hour, uint8_t * min, uint8_t * sec);
 
-void setM0Pause(bool m0_pause);
-bool setPrintPause(bool is_pause, bool is_m0pause);
+void setPrintRemainingTime(int32_t remainingTime);  // used for M73 Rxx and M117 Time Left xx
+void parsePrintRemainingTime(char * buffer);        // used for M117 Time Left xx
+uint32_t getPrintRemainingTime();
+void getPrintRemainingTimeDetail(uint8_t * hour, uint8_t * min, uint8_t * sec);
 
-void setPrintSize(uint32_t size);
-void setPrintCur(uint32_t cur);
 uint32_t getPrintSize(void);
 uint32_t getPrintCur(void);
-bool getPrintRunout(void);
+
+void setPrintProgress(float cur, float size);
+void setPrintProgressPercentage(uint8_t percentage);  // used by M73 Pxx
+bool updatePrintProgress(void);
+uint8_t getPrintProgress(void);
+
 void setPrintRunout(bool runout);
-void setPrintModelIcon(bool exist);
-bool getPrintModelIcon(void);
+bool getPrintRunout(void);
 
-uint8_t   getPrintProgress(void);
-uint32_t  getPrintTime(void);
+//
+// commented because NOT externally invoked
+//
+//void shutdown(void);
+//void shutdownLoop(void);
+//void shutdownStart(void);  // start auto shutdown after a print successfully completed
+//void initPrintSummary(void);
+//void preparePrintSummary(void);
+//void sendPrintCodes(uint8_t index);
 
-void printSetUpdateWaiting(bool isWaiting);
+void printSetUpdateWaiting(bool isWaiting);       // called in interfaceCmd.c
+void updatePrintUsedFilament(void);               // called in PrintingMenu.c
+uint8_t * getPrintName(char * path);              // called in PrintingMenu.c
+void clearInfoPrint(void);                        // called in PrintingMenu.c
 
-void getGcodeFromFile(void);
+void printStart(FIL * file, uint32_t size);       // it also sends start gcode
+void printEnd(void);                              // it also sends end gcode
 
-void shutdown(void);
-void shutdownLoop(void);
-void startShutdown(void);
+void printComplete(void);                         // print successfully completed
+void printAbort(void);                            // it also sends cancel gcode
+bool printPause(bool isPause, PAUSE_TYPE pauseType);
 
-void printingFinished(void);
-void loopCheckPrinting(void);
+bool isPrinting(void);
+bool isPaused(void);
+
+void setPrintHost(bool isPrinting);
+void setPrintAbort(void);
+void setPrintPause(bool updateHost, PAUSE_TYPE pauseType);
+void setPrintResume(bool updateHost);
+
+void loopPrintFromTFT(void);   // called in loopBackEnd(). It handles a print from TFT, if any
+void loopPrintFromHost(void);  // called in loopBackEnd(). It handles a print from onboard SD or remote host (e.g. USB), if any
 
 #ifdef __cplusplus
 }

@@ -1,118 +1,242 @@
 #include "Numpad.h"
+#include "CharIcon.h"
 
-const GUI_RECT rect_of_numkey[KEY_NUM]={
-  {0*SKEYWIDTH, ICON_START_Y+0*SKEYHEIGHT, 1*SKEYWIDTH, ICON_START_Y+1*SKEYHEIGHT},//1
-  {1*SKEYWIDTH, ICON_START_Y+0*SKEYHEIGHT, 2*SKEYWIDTH, ICON_START_Y+1*SKEYHEIGHT},//2
-  {2*SKEYWIDTH, ICON_START_Y+0*SKEYHEIGHT, 3*SKEYWIDTH, ICON_START_Y+1*SKEYHEIGHT},//3
-  {3*SKEYWIDTH, ICON_START_Y+0*SKEYHEIGHT, 4*SKEYWIDTH, ICON_START_Y+1*SKEYHEIGHT},//OK
+#define SKEYHEIGHT (LCD_HEIGHT - ICON_START_Y) / 4
+#define SKEYWIDTH  LCD_WIDTH / 4
 
-  {0*SKEYWIDTH, ICON_START_Y+1*SKEYHEIGHT, 1*SKEYWIDTH, ICON_START_Y+2*SKEYHEIGHT},//4
-  {1*SKEYWIDTH, ICON_START_Y+1*SKEYHEIGHT, 2*SKEYWIDTH, ICON_START_Y+2*SKEYHEIGHT},//5
-  {2*SKEYWIDTH, ICON_START_Y+1*SKEYHEIGHT, 3*SKEYWIDTH, ICON_START_Y+2*SKEYHEIGHT},//6
-  {3*SKEYWIDTH, ICON_START_Y+1*SKEYHEIGHT, 4*SKEYWIDTH, ICON_START_Y+2*SKEYHEIGHT},//Del
+#define KEY_COUNT        16
+#define FLOAT_BUF_LENGTH  9
+#define INT_BUF_LENGTH    6
 
-  {0*SKEYWIDTH, ICON_START_Y+2*SKEYHEIGHT, 1*SKEYWIDTH, ICON_START_Y+3*SKEYHEIGHT},//7
-  {1*SKEYWIDTH, ICON_START_Y+2*SKEYHEIGHT, 2*SKEYWIDTH, ICON_START_Y+3*SKEYHEIGHT},//8
-  {2*SKEYWIDTH, ICON_START_Y+2*SKEYHEIGHT, 3*SKEYWIDTH, ICON_START_Y+3*SKEYHEIGHT},//9
-  {3*SKEYWIDTH, ICON_START_Y+2*SKEYHEIGHT, 4*SKEYWIDTH, ICON_START_Y+3*SKEYHEIGHT},//
-
-  {0*SKEYWIDTH, ICON_START_Y+3*SKEYHEIGHT, 1*SKEYWIDTH, ICON_START_Y+4*SKEYHEIGHT},//.
-  {1*SKEYWIDTH, ICON_START_Y+3*SKEYHEIGHT, 2*SKEYWIDTH, ICON_START_Y+4*SKEYHEIGHT},//0
-  {2*SKEYWIDTH, ICON_START_Y+3*SKEYHEIGHT, 3*SKEYWIDTH, ICON_START_Y+4*SKEYHEIGHT},//-
-  {3*SKEYWIDTH, ICON_START_Y+3*SKEYHEIGHT, 4*SKEYWIDTH, ICON_START_Y+4*SKEYHEIGHT},//
-};
-
-const char *const numPadKeyChar[KEY_NUM] = {
-  "1","2","3","\u0894",
-  "4","5","6","\u0899",
-  "7","8","9","\u0895",
-  ".","0","-","\u08A5"
-};
-const GUI_RECT oldParameterRect = {0,                        0, LCD_WIDTH/2 - BYTE_WIDTH,  ICON_START_Y+0*SKEYHEIGHT};
-const GUI_RECT newParameterRect = {LCD_WIDTH/2 + BYTE_WIDTH, 0,                LCD_WIDTH,  ICON_START_Y+0*SKEYHEIGHT};
-const GUI_RECT arrowRect        = {LCD_WIDTH/2 - BYTE_WIDTH, 0, LCD_WIDTH/2 + BYTE_WIDTH,  ICON_START_Y+0*SKEYHEIGHT};
-
-void keyPress(u8 index, u8 ispressed)
+typedef enum
 {
-  if (index < KEY_NUM)
-  {
-    if(!ispressed)
+  NUM_KEY_1 = 0,
+  NUM_KEY_2,
+  NUM_KEY_3,
+  NUM_KEY_OK,
+  NUM_KEY_4,
+  NUM_KEY_5,
+  NUM_KEY_6,
+  NUM_KEY_DEL,
+  NUM_KEY_7,
+  NUM_KEY_8,
+  NUM_KEY_9,
+  NUM_KEY_EXIT,
+  NUM_KEY_DEC,
+  NUM_KEY_0,
+  NUM_KEY_MINUS,
+  NUM_KEY_RESET,
+
+  NUM_KEY_IDLE = IDLE_TOUCH,
+} NUM_KEY_VALUES;
+
+const GUI_RECT rect_of_numkey[KEY_COUNT] = {
+  {0 * SKEYWIDTH, ICON_START_Y + 0 * SKEYHEIGHT, 1 * SKEYWIDTH, ICON_START_Y + 1 * SKEYHEIGHT},  // 1
+  {1 * SKEYWIDTH, ICON_START_Y + 0 * SKEYHEIGHT, 2 * SKEYWIDTH, ICON_START_Y + 1 * SKEYHEIGHT},  // 2
+  {2 * SKEYWIDTH, ICON_START_Y + 0 * SKEYHEIGHT, 3 * SKEYWIDTH, ICON_START_Y + 1 * SKEYHEIGHT},  // 3
+  {3 * SKEYWIDTH, ICON_START_Y + 0 * SKEYHEIGHT, 4 * SKEYWIDTH, ICON_START_Y + 1 * SKEYHEIGHT},  // OK
+
+  {0 * SKEYWIDTH, ICON_START_Y + 1 * SKEYHEIGHT, 1 * SKEYWIDTH, ICON_START_Y + 2 * SKEYHEIGHT},  // 4
+  {1 * SKEYWIDTH, ICON_START_Y + 1 * SKEYHEIGHT, 2 * SKEYWIDTH, ICON_START_Y + 2 * SKEYHEIGHT},  // 5
+  {2 * SKEYWIDTH, ICON_START_Y + 1 * SKEYHEIGHT, 3 * SKEYWIDTH, ICON_START_Y + 2 * SKEYHEIGHT},  // 6
+  {3 * SKEYWIDTH, ICON_START_Y + 1 * SKEYHEIGHT, 4 * SKEYWIDTH, ICON_START_Y + 2 * SKEYHEIGHT},  // Del
+
+  {0 * SKEYWIDTH, ICON_START_Y + 2 * SKEYHEIGHT, 1 * SKEYWIDTH, ICON_START_Y + 3 * SKEYHEIGHT},  // 7
+  {1 * SKEYWIDTH, ICON_START_Y + 2 * SKEYHEIGHT, 2 * SKEYWIDTH, ICON_START_Y + 3 * SKEYHEIGHT},  // 8
+  {2 * SKEYWIDTH, ICON_START_Y + 2 * SKEYHEIGHT, 3 * SKEYWIDTH, ICON_START_Y + 3 * SKEYHEIGHT},  // 9
+  {3 * SKEYWIDTH, ICON_START_Y + 2 * SKEYHEIGHT, 4 * SKEYWIDTH, ICON_START_Y + 3 * SKEYHEIGHT},  // Cancel
+
+  {0 * SKEYWIDTH, ICON_START_Y + 3 * SKEYHEIGHT, 1 * SKEYWIDTH, ICON_START_Y + 4 * SKEYHEIGHT},  // .
+  {1 * SKEYWIDTH, ICON_START_Y + 3 * SKEYHEIGHT, 2 * SKEYWIDTH, ICON_START_Y + 4 * SKEYHEIGHT},  // 0
+  {2 * SKEYWIDTH, ICON_START_Y + 3 * SKEYHEIGHT, 3 * SKEYWIDTH, ICON_START_Y + 4 * SKEYHEIGHT},  // -
+  {3 * SKEYWIDTH, ICON_START_Y + 3 * SKEYHEIGHT, 4 * SKEYWIDTH, ICON_START_Y + 4 * SKEYHEIGHT},  // Undo/Reset
+};
+
+const GUI_RECT oldParameterRect = {0,                          0, LCD_WIDTH / 2 - BYTE_WIDTH,  ICON_START_Y + 0 * SKEYHEIGHT};
+const GUI_RECT newParameterRect = {LCD_WIDTH / 2 + BYTE_WIDTH, 0,                  LCD_WIDTH,  ICON_START_Y + 0 * SKEYHEIGHT};
+const GUI_RECT arrowRect        = {LCD_WIDTH / 2 - BYTE_WIDTH, 0, LCD_WIDTH / 2 + BYTE_WIDTH,  ICON_START_Y + 0 * SKEYHEIGHT};
+
+const char * const numPadKeyChar[KEY_COUNT] = {
+  "1", "2", "3", "\u0894",
+  "4", "5", "6", "\u0899",
+  "7", "8", "9", "\u0895",
+  ".", "0", "-", "\u08A5"
+};
+
+uint8_t numpadType = 0;  // numpad type identifier
+
+void drawKeypadButton(uint8_t index, uint8_t isPressed)
+{
+  if (index >= COUNT(rect_of_numkey)) return;
+
+  #ifdef KEYBOARD_MATERIAL_THEME
+    uint16_t fontcolor = KEY_FONT_COLOR;
+    uint16_t bgcolor = KEY_BG_COLOR;
+    GUI_RECT rectBtn = {rect_of_numkey[index].x0 + 4, rect_of_numkey[index].y0 + 4,
+                        rect_of_numkey[index].x1 - 4, rect_of_numkey[index].y1 - 4};
+
+    switch (index)
+    {
+      case NUM_KEY_OK:
+        fontcolor = CTRL_FONT_COLOR;
+        bgcolor = MAT_GREEN;
+        break;
+      case NUM_KEY_DEL:
+        fontcolor = CTRL_FONT_COLOR;
+        bgcolor = MAT_ORANGE;
+        break;
+      case NUM_KEY_EXIT:
+        fontcolor = CTRL_FONT_COLOR;
+        bgcolor = MAT_RED;
+        break;
+      case NUM_KEY_RESET:
+        fontcolor = CTRL_FONT_COLOR;
+        bgcolor = MAT_SLATE;
+        break;
+      default:
+        break;
+     }
+
+    BUTTON btn = {.fontColor  = fontcolor,
+                  .backColor  = bgcolor,
+                  .context    = (uint8_t *)numPadKeyChar[index],
+                  .lineColor  = bgcolor,
+                  .lineWidth  = 0,
+                  .pBackColor = fontcolor,
+                  .pFontColor = bgcolor,
+                  .pLineColor = fontcolor,
+                  .radius     = 13,
+                  .rect       = rectBtn};
+
+    setFontSize(FONT_SIZE_LARGE);
+    if (!(index == NUM_KEY_DEC && ((numpadType >> 0) & 1)) && !(index == NUM_KEY_MINUS && !((numpadType >> 1) & 1)))
+      GUI_DrawButton(&btn, isPressed);
+    setFontSize(FONT_SIZE_NORMAL);
+    #else
+
+    if (!isPressed)
       GUI_SetColor(BLACK);
-    GUI_DrawRect(rect_of_numkey[index].x0+2, rect_of_numkey[index].y0+2, rect_of_numkey[index].x1-2, rect_of_numkey[index].y1-2);
+    GUI_DrawRect(rect_of_numkey[index].x0 + 2, rect_of_numkey[index].y0 + 2, rect_of_numkey[index].x1-2, rect_of_numkey[index].y1 - 2);
     GUI_SetColor(infoSettings.font_color);
-  }
+
+    #endif  // KEYBOARD_MATERIAL_THEME
 }
 
-void Draw_keyboard(u8 * title, bool NumberOnly, bool negative)
+void Draw_keyboard(uint8_t * title, bool numberOnly, bool negative)
 {
+  numpadType = (negative << 1) | (numberOnly << 0);  // numpad type identfier
+  GUI_SetTextMode(GUI_TEXTMODE_TRANS);
+
+  #ifdef KEYBOARD_MATERIAL_THEME
+    GUI_SetBkColor(BAR_BG_COLOR);
+    GUI_ClearRect(0, 0, LCD_WIDTH, rect_of_numkey[0].y0);
+
+    GUI_SetBkColor(KB_BG_COLOR);
+    GUI_ClearRect(0, rect_of_numkey[0].y0, LCD_WIDTH, LCD_HEIGHT);
+
+    GUI_SetColor(BAR_BORDER_COLOR);
+    // draw value display border line
+    GUI_HLine(rect_of_numkey[0].x0,rect_of_numkey[0].y0,rect_of_numkey[3].x1);
+
+    for (uint8_t i = 0; i < KEY_COUNT; i++)
+    {
+      drawKeypadButton(i, false);
+    }
+    GUI_SetColor(BAR_FONT_COLOR);
+  #else
     GUI_ClearRect(0, 0, LCD_WIDTH, rect_of_numkey[0].y0);
     GUI_ClearRect(0, rect_of_numkey[0].y0, LCD_WIDTH, LCD_HEIGHT);
 
+    // draw button borders
     GUI_SetColor(infoSettings.list_border_color);
-     //draw button borders
-    for (int i = 0;i<3;i++){
-      GUI_DrawLine(rect_of_numkey[i].x1,rect_of_numkey[i].y0,rect_of_numkey[12+i].x1,rect_of_numkey[12+i].y1);
-      GUI_DrawLine(rect_of_numkey[i*4].x0,rect_of_numkey[i*4].y1,rect_of_numkey[3+i*4].x1,rect_of_numkey[3+i*4].y1);
-    }
-
-    GUI_SetColor(infoSettings.font_color);
-    // draw value display border line
-    GUI_DrawLine(rect_of_numkey[0].x0,rect_of_numkey[0].y0,rect_of_numkey[3].x1,rect_of_numkey[3].y0);
-
-    GUI_SetTextMode(GUI_TEXTMODE_TRANS);
-    for(uint8_t i=0 ;i<KEY_NUM ;i++)
+    for (int i = 0; i < 3; i++)
     {
-      if( !(i == NUM_KEY_DEC || i == NUM_KEY_MINUS || i == NUM_KEY_OK || i == NUM_KEY_DEL || i == NUM_KEY_EXIT || i == NUM_KEY_RESET) )
-        GUI_DispStringInPrect(&rect_of_numkey[i],(u8*)numPadKeyChar[i]);
+      GUI_VLine(rect_of_numkey[i].x1, rect_of_numkey[i].y0, rect_of_numkey[12+i].y1);
+      GUI_HLine(rect_of_numkey[i*4].x0, rect_of_numkey[i*4].y1, rect_of_numkey[3+i*4].x1);
     }
 
-    if(!NumberOnly)
-      GUI_DispStringInPrect(&rect_of_numkey[NUM_KEY_DEC],(u8*)numPadKeyChar[NUM_KEY_DEC]);
-    if(negative)
-      GUI_DispStringInPrect(&rect_of_numkey[NUM_KEY_MINUS],(u8*)numPadKeyChar[NUM_KEY_MINUS]);
+    // draw value display border line
+    GUI_SetColor(infoSettings.font_color);
+    GUI_HLine(rect_of_numkey[0].x0,rect_of_numkey[0].y0,rect_of_numkey[3].x1);
 
-    DrawCharIcon(&rect_of_numkey[NUM_KEY_OK], MIDDLE, ICONCHAR_OK, false, 0);
-    DrawCharIcon(&rect_of_numkey[NUM_KEY_DEL], MIDDLE, ICONCHAR_POINT_LEFT, false, 0);
-    DrawCharIcon(&rect_of_numkey[NUM_KEY_EXIT], MIDDLE, ICONCHAR_CANCEL, false, 0);
-    DrawCharIcon(&rect_of_numkey[NUM_KEY_RESET], MIDDLE, ICONCHAR_RESET, false, 0);
+    setFontSize(FONT_SIZE_LARGE);
 
-    GUI_DispStringInPrect(&arrowRect,(u8 *)"\u089A");
-    GUI_DispStringInPrect(&oldParameterRect, title);
+    for (uint8_t i = 0; i < KEY_COUNT ;i++)
+    {
+      if (!(i == NUM_KEY_DEC || i == NUM_KEY_MINUS || (i % 4) == 3))  // || i == NUM_KEY_DEL || i == NUM_KEY_EXIT || i == NUM_KEY_RESET))
+        GUI_DispStringInPrect(&rect_of_numkey[i], (uint8_t *)numPadKeyChar[i]);
+    }
 
-    GUI_RestoreColorDefault();
+    if (!numberOnly)
+      GUI_DispStringInPrect(&rect_of_numkey[NUM_KEY_DEC],(uint8_t *)numPadKeyChar[NUM_KEY_DEC]);
+    if (negative)
+      GUI_DispStringInPrect(&rect_of_numkey[NUM_KEY_MINUS],(uint8_t *)numPadKeyChar[NUM_KEY_MINUS]);
+
+    setFontSize(FONT_SIZE_LARGE);
+
+    drawCharIcon(&rect_of_numkey[NUM_KEY_OK], CENTER, CHARICON_OK, false, 0);
+    drawCharIcon(&rect_of_numkey[NUM_KEY_DEL], CENTER, CHARICON_POINT_LEFT, false, 0);
+    drawCharIcon(&rect_of_numkey[NUM_KEY_EXIT], CENTER, CHARICON_CANCEL, false, 0);
+    drawCharIcon(&rect_of_numkey[NUM_KEY_RESET], CENTER, CHARICON_RESET, false, 0);
+
+  #endif  // KEYBOARD_MATERIAL_THEME
+
+  GUI_DispStringInPrect(&arrowRect,(uint8_t *)"\u089A");
+
+  setFontSize(FONT_SIZE_LARGE);
+  if ((oldParameterRect.x1 - oldParameterRect.x0) <= GUI_StrPixelWidth_str(title))
+    setFontSize(FONT_SIZE_NORMAL);
+
+  GUI_DispStringInPrect(&oldParameterRect, title);
+  setFontSize(FONT_SIZE_NORMAL);
 }
 
-
-//Numpad for decimal numbers
-float numPadFloat(u8* title, float old_val, float reset_val, bool negative)
+static inline void drawValue(char * str)
 {
-    //bool exit = false;
-    NUM_KEY_VALUES key_num = NUM_KEY_IDLE;
-    touchSound = false;
-    setLargeFont(true);
-    u8 nowIndex = 0, lastIndex = 0;
-    char ParameterBuf[FLOAT_BUFLONG + 1] = {0};
-    u8 prec = (old_val == 0) ? 0 : 2;
-    sprintf(ParameterBuf,"%.*f", prec, old_val);
-    nowIndex = strlen(ParameterBuf);
+  #ifdef KEYBOARD_MATERIAL_THEME
+    GUI_SetBkColor(BAR_BG_COLOR);
+    GUI_SetColor(BAR_FONT_COLOR);
+  #endif
+  GUI_ClearPrect(&newParameterRect);
 
-    if (title == NULL)
-    {
-      char tempstr[FLOAT_BUFLONG + 1];
-      sprintf(tempstr, "%.*f", prec, old_val);
-      title = (u8 *)tempstr;
-    }
-    setMenu(MENU_TYPE_FULLSCREEN, NULL, COUNT(rect_of_numkey), rect_of_numkey, keyPress);
-    Draw_keyboard(title, false, negative);
+  setFontSize(FONT_SIZE_LARGE);
+  GUI_DispStringInPrect(&newParameterRect, (uint8_t *)str);
+  setFontSize(FONT_SIZE_NORMAL);
+}
 
-    while (1)
+// Numpad for decimal numbers
+double numPadFloat(uint8_t * title, double old_val, double reset_val, bool negative)
+{
+  //bool exit = false;
+  NUM_KEY_VALUES key_num = NUM_KEY_IDLE;
+  touchSound = false;
+
+  uint8_t nowIndex = 0;
+  uint8_t lastIndex = 0;
+  char ParameterBuf[FLOAT_BUF_LENGTH + 1] = {0};
+  uint8_t prec = (old_val == 0) ? 0 : 3;
+  bool valueFirstPress = true;
+
+  sprintf(ParameterBuf, "%.*f", prec, old_val);
+  nowIndex = strlen(ParameterBuf);
+
+  if (title == NULL)
+  {
+    char tempstr[FLOAT_BUF_LENGTH + 1];
+    sprintf(tempstr, "%.*f", prec, old_val);
+    title = (uint8_t *)tempstr;
+  }
+
+  setMenu(MENU_TYPE_FULLSCREEN, NULL, COUNT(rect_of_numkey), rect_of_numkey, drawKeypadButton, NULL);
+  Draw_keyboard(title, false, negative);
+
+  while (1)
+  {
+    key_num = menuKeyGetValue();
+    switch (key_num)
     {
-      key_num = menuKeyGetValue();
-      switch (key_num)
-      {
       case NUM_KEY_EXIT:
         BUZZER_PLAY(sound_cancel);
-        setLargeFont(false);
         touchSound = true;
         return old_val;
 
@@ -120,6 +244,7 @@ float numPadFloat(u8* title, float old_val, float reset_val, bool negative)
         if (nowIndex)
         {
           ParameterBuf[--nowIndex] = 0;
+          valueFirstPress = false;
           BUZZER_PLAY(sound_keypress);
         }
         else
@@ -129,9 +254,11 @@ float numPadFloat(u8* title, float old_val, float reset_val, bool negative)
         break;
 
       case NUM_KEY_RESET:
-        sprintf(ParameterBuf,"%.*f", prec, old_val);
+        sprintf(ParameterBuf, "%.*f", prec, reset_val);
         nowIndex = strlen(ParameterBuf);
         lastIndex = nowIndex + 1;
+        valueFirstPress = true;
+        BUZZER_PLAY(sound_keypress);
         break;
 
       case NUM_KEY_1:
@@ -144,9 +271,15 @@ float numPadFloat(u8* title, float old_val, float reset_val, bool negative)
       case NUM_KEY_8:
       case NUM_KEY_9:
       case NUM_KEY_0:
-        if (nowIndex < FLOAT_BUFLONG - 1)
+        if (valueFirstPress == true)
         {
-          if(ParameterBuf[0] == '0' && nowIndex == 1)
+          valueFirstPress = false;
+          ParameterBuf[0] = '0';
+          nowIndex = 1;
+        }
+        if (nowIndex < FLOAT_BUF_LENGTH - 1)
+        {
+          if (ParameterBuf[0] == '0' && nowIndex == 1)
             nowIndex = lastIndex = 0;
           ParameterBuf[nowIndex++] = numPadKeyChar[key_num][0];
           ParameterBuf[nowIndex] = 0;
@@ -157,11 +290,18 @@ float numPadFloat(u8* title, float old_val, float reset_val, bool negative)
           BUZZER_PLAY(sound_deny);
         }
         break;
+
       case NUM_KEY_DEC:
-        if (!strchr((const char *)ParameterBuf, numPadKeyChar[key_num][0]) && nowIndex < (FLOAT_BUFLONG - 1))
+        if (valueFirstPress == true)
         {
-          if (nowIndex == 0 || (nowIndex == 1 && strchr((const char *)ParameterBuf, '-'))) // check if no number exits or only minus exists
-            ParameterBuf[nowIndex++] = '0';                                                //add zero before decimal sign if it is the first character
+          valueFirstPress = false;
+          ParameterBuf[0] = 0;
+          nowIndex = lastIndex = 0;
+        }
+        if (!strchr((const char *)ParameterBuf, numPadKeyChar[key_num][0]) && nowIndex < (FLOAT_BUF_LENGTH - 1))
+        {
+          if (nowIndex == 0 || (nowIndex == 1 && strchr((const char *)ParameterBuf, '-')))  // check if no number exits or only minus exists
+            ParameterBuf[nowIndex++] = '0';                                                 // add zero before decimal sign if it is the first character
           ParameterBuf[nowIndex++] = numPadKeyChar[key_num][0];
           ParameterBuf[nowIndex] = 0;
           BUZZER_PLAY(sound_keypress);
@@ -171,9 +311,16 @@ float numPadFloat(u8* title, float old_val, float reset_val, bool negative)
           BUZZER_PLAY(sound_deny);
         }
         break;
+
       case NUM_KEY_MINUS:
         if (negative)
         {
+          if (valueFirstPress == true)
+          {
+            valueFirstPress = false;
+            ParameterBuf[0] = 0;
+            nowIndex = lastIndex = 0;
+          }
           if (!strchr((const char *)ParameterBuf, numPadKeyChar[key_num][0]) && nowIndex == 0)
           {
             ParameterBuf[nowIndex++] = numPadKeyChar[key_num][0];
@@ -191,67 +338,64 @@ float numPadFloat(u8* title, float old_val, float reset_val, bool negative)
         if (nowIndex > 0)
         {
           if (nowIndex == 1 && (strchr((const char *)ParameterBuf, '.') || strchr((const char *)ParameterBuf, '-')))
-            {
-              BUZZER_PLAY(sound_deny);
-              break;
-            }
+          {
+            BUZZER_PLAY(sound_deny);
+            break;
+          }
           BUZZER_PLAY(sound_ok);
-          setLargeFont(false);
           touchSound = true;
-          return strtof(ParameterBuf, NULL);
+          return strtod(ParameterBuf, NULL);
         }
+
       default:
         break;
-      }
-
-      if (lastIndex != nowIndex)
-      {
-        lastIndex = nowIndex;
-        GUI_ClearPrect(&newParameterRect);
-        setLargeFont(true);
-        GUI_DispStringInPrect(&newParameterRect, (u8 *)ParameterBuf);
-      }
-      loopBackEnd();
     }
+
+    if (lastIndex != nowIndex)
+    {
+      lastIndex = nowIndex;
+      drawValue(ParameterBuf);
+    }
+    loopBackEnd();
+  }
 }
 
-//Numpad for integer numbers
-int32_t numPadInt(u8* title, int32_t old_val, int32_t reset_val, bool negative)
+// Numpad for integer numbers
+int32_t numPadInt(uint8_t* title, int32_t old_val, int32_t reset_val, bool negative)
 {
-    NUM_KEY_VALUES key_num = NUM_KEY_IDLE;
-    touchSound = false;
-    setLargeFont(true);
+  NUM_KEY_VALUES key_num = NUM_KEY_IDLE;
+  touchSound = false;
 
-    int32_t val = old_val, lastval = 0;
-    uint8_t len = 0;
-    char ParameterBuf[INT_BUFLONG + 1];
-    int8_t neg = 1, lastneg = 1;
+  int32_t val = old_val, lastval = 0;
+  uint8_t len = 0;
+  char ParameterBuf[INT_BUF_LENGTH + 1];
+  int8_t neg = (old_val < 0) ? -1 : 1;
+  int8_t lastneg = 1;
+  bool valueFirstPress = true;
 
-    if (old_val < 0)
-      neg = -1;
-    val = old_val * neg;
-    if (title == NULL)
+  val = old_val * neg;
+
+  if (title == NULL)
+  {
+    char tempstr[INT_BUF_LENGTH + 1];
+    sprintf(tempstr, "%i", old_val);
+    title = (uint8_t *)tempstr;
+  }
+
+  setMenu(MENU_TYPE_FULLSCREEN, NULL, COUNT(rect_of_numkey), rect_of_numkey, drawKeypadButton, NULL);
+  Draw_keyboard(title, true, negative);
+
+  sprintf(ParameterBuf, "%i", val);
+  drawValue(ParameterBuf);
+  len = strlen(ParameterBuf);
+
+  while (1)
+  {
+    key_num = menuKeyGetValue();
+    switch (key_num)
     {
-      char tempstr[INT_BUFLONG + 1];
-      sprintf(tempstr, "%i", old_val);
-      title = (u8 *)tempstr;
-    }
-    setMenu(MENU_TYPE_FULLSCREEN, NULL, COUNT(rect_of_numkey), rect_of_numkey, keyPress);
-    Draw_keyboard(title, true, negative);
-
-    sprintf(ParameterBuf,"%i",val);
-    len = strlen(ParameterBuf);
-    setLargeFont(true);
-    GUI_DispStringInPrect(&newParameterRect, (u8 *)ParameterBuf);
-
-    while (1)
-    {
-      key_num = menuKeyGetValue();
-      switch (key_num)
-      {
       case NUM_KEY_EXIT:
         BUZZER_PLAY(sound_cancel);
-        setLargeFont(false);
         touchSound = true;
         return old_val;
 
@@ -266,7 +410,8 @@ int32_t numPadInt(u8* title, int32_t old_val, int32_t reset_val, bool negative)
       case NUM_KEY_DEL:
         if (val > 0)
         {
-          val = (val - (val % 10)) / 10;
+          val /= 10;
+          valueFirstPress = false;
           BUZZER_PLAY(sound_keypress);
         }
         else
@@ -274,11 +419,14 @@ int32_t numPadInt(u8* title, int32_t old_val, int32_t reset_val, bool negative)
           BUZZER_PLAY(sound_deny);
         }
         break;
+
       case NUM_KEY_RESET:
-          neg = (reset_val >= 0) ? 1: -1;
-          val = reset_val * neg;
-          BUZZER_PLAY(sound_keypress);
-      break;
+        neg = (reset_val >= 0) ? 1 : -1;
+        val = reset_val * neg;
+        valueFirstPress = true;
+        BUZZER_PLAY(sound_keypress);
+        break;
+
       case NUM_KEY_1:
       case NUM_KEY_2:
       case NUM_KEY_3:
@@ -289,41 +437,42 @@ int32_t numPadInt(u8* title, int32_t old_val, int32_t reset_val, bool negative)
       case NUM_KEY_8:
       case NUM_KEY_9:
       case NUM_KEY_0:
+        if (valueFirstPress == true)
+        {
+          valueFirstPress = false;
+          val = 0;
+        }
         len = strlen(ParameterBuf);
-        if (len < INT_BUFLONG && !(val == 0 && key_num == NUM_KEY_0))
-          {
-            int num = (numPadKeyChar[key_num][0] - '0');
-            if (val < 0)
-              num = -1 * num;
-            val = (val * 10) + num;
-            BUZZER_PLAY(sound_keypress);
-          }
-          else
-          {
-            BUZZER_PLAY(sound_deny);
-          }
+        if (len < INT_BUF_LENGTH && !(val == 0 && key_num == NUM_KEY_0))
+        {
+          int num = (numPadKeyChar[key_num][0] - '0');
+          val = (val * 10) + ABS(num);
+          BUZZER_PLAY(sound_keypress);
+        }
+        else
+        {
+          BUZZER_PLAY(sound_deny);
+        }
         break;
 
       case NUM_KEY_OK:
         BUZZER_PLAY(sound_ok);
-        setLargeFont(false);
+        setFontSize(FONT_SIZE_NORMAL);
         touchSound = true;
         return (val * neg);
 
       default:
         break;
-      }
-
-      if (lastval != val || lastneg != neg)
-      {
-        lastval = val;
-        lastneg = neg;
-        char * n = (neg > 0) ? "" : "-";
-        GUI_ClearPrect(&newParameterRect);
-        sprintf(ParameterBuf, "%s%i", n, val);
-        setLargeFont(true);
-        GUI_DispStringInPrect(&newParameterRect, (u8 *)ParameterBuf);
-      }
-      loopBackEnd();
     }
+
+    if (lastval != val || lastneg != neg)
+    {
+      lastval = val;
+      lastneg = neg;
+      GUI_ClearPrect(&newParameterRect);
+      sprintf(ParameterBuf, "%i", val * neg);
+      drawValue(ParameterBuf);
+    }
+    loopBackEnd();
+  }
 }

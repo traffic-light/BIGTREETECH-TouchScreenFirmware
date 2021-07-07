@@ -39,11 +39,11 @@
 //#define SS_SPACE_X              ((LCD_WIDTH - SSICON_WIDTH*5) - ((LCD_WIDTH - ICON_WIDTH*4)/4)*3.5)
 #define SS_SPACE_X                (((LCD_WIDTH - (SSICON_WIDTH * SSICON_COUNT + (LCD_WIDTH - ICON_WIDTH*4)/4)) / (SSICON_COUNT-1))+0.5)
 #define SSICON_VAL_Y0             38
-#define SSICON_VAL_COLOR          LCD_WHITE
+#define SSICON_VAL_COLOR          WHITE
 #define SSICON_VAL2_Y0            70
-#define SSICON_VAL2_COLOR         LCD_ORANGE
+#define SSICON_VAL2_COLOR         ORANGE
 #define SSICON_NAME_Y0            110
-#define SSICON_NAME_COLOR         LCD_WHITE
+#define SSICON_NAME_COLOR         WHITE
 #define STATUS_MSG_ICON_XOFFSET   5
 #define STATUS_MSG_ICON_YOFFSET   5
 #define STATUS_MSG_TITLE_XOFFSET  5
@@ -52,11 +52,11 @@
 #define STATUS_MSG_BODY_BOTTOM    29
 #define STATUS_GANTRY_YOFFSET     6
 
-#define NAME_LARGE_FONT           false
-#define VAL_LARGE_FONT            true
-#define VAL2_LARGE_FONT           false
+#define NAME_LARGE_FONT           FONT_SIZE_NORMAL
+#define VAL_LARGE_FONT            FONT_SIZE_LARGE
+#define VAL2_LARGE_FONT           FONT_SIZE_NORMAL
 
-//Heating Menu
+// Heating Menu
 #define PREHEAT_TITLE_Y   6
 #define PREHEAT_TOOL_Y    65
 #define PREHEAT_BED_Y     105
@@ -66,7 +66,8 @@
 #define PICON_SM_WIDTH     201
 #define PICON_HEIGHT       75
 #define PICON_SPACE_X      ((LCD_WIDTH - PICON_LG_WIDTH*2 - PICON_SM_WIDTH - SPACE_X )/2)
-#define PICON_SPACE_Y      (ICON_HEIGHT + SPACE_Y - PICON_HEIGHT*2)/2
+#define PICON_SPACE_Y      (ICON_HEIGHT + SPACE_Y - PICON_HEIGHT*2)/4
+#define PICON_START_Y      (TITLE_END_Y+5)
 #define PICON_TITLE_X      80
 #define PICON_TITLE_Y      1
 #define PICON_VAL_X        75
@@ -91,18 +92,20 @@
 #define W25QXX_SECTOR_SIZE (0x1000) // 4096byte = 4K
 
 #ifndef LOGO_MAX_SIZE
-  #define LOGO_MAX_SIZE            0xBC000    // 800*480*2 = 0xBB800(+0xBC000) bytes
-  #define WORD_UNICODE_SIZE       0x480000    // 24*24/8 * 65536(unicode) = 0x480000 bytes(4.5M)
-  #define BYTE_ASCII_SIZE           0x1000    // 24*12/8 * 95(visible ascii) = 0x0D5C (+0x1000 4K)
+  #define LOGO_MAX_SIZE            0xBC000  // 800*480*2 = 0xBB800(+0xBC000) bytes
+  #define WORD_UNICODE_SIZE       0x480000  // 24*24/8 * 65536(unicode) = 0x480000 bytes(4.5M)
+  #define BYTE_ASCII_SIZE           0x1000  // 24*12/8 * 95(visible ascii) = 0x0D5C (+0x1000 4K)
   #define LARGE_FONT_SIZE           0x3000
-  #define FLASH_SIGN_SIZE           0x1000    // store status of last font/icon/config update
-  #define LANGUAGE_SIZE            0x12000
-  #define STRINGS_STORE_MAX_SIZE    0x5000    // label strings max size
-  #define PRINT_GCODES_MAX_SIZE     0x5000    // start/end/cancel gcodes  max size
-  #define CUSTOM_GCODE_MAX_SIZE     0x5000    // custom gocdes max size
-  #define ICON_MAX_SIZE             0xB000    // 160*140*2 = 0xAF00 (+0xB000) per button icon
-  #define INFOBOX_MAX_SIZE         0x19000    // 360*140*2 = 0x189C0 (+0x19000)
-  #define SMALL_ICON_MAX_SIZE       0x2000    // 24*24*2 = 0x480 (+0x1000) per small icon
+  #define _8X16_FONT_SIZE           0x1000
+  #define FLASH_SIGN_SIZE           0x1000  // store status of last font/icon/config update
+  #define LANGUAGE_SIZE            0x14000
+  #define STRINGS_STORE_MAX_SIZE    0x1000  // label strings max size
+  #define PREHEAT_STORE_MAX_SIZE    0x1000  // preheat setting max size
+  #define PRINT_GCODES_MAX_SIZE     0x5000  // start/end/cancel gcodes  max size
+  #define CUSTOM_GCODE_MAX_SIZE     0x5000  // custom gocdes max size
+  #define ICON_MAX_SIZE             0xB000  // 160*140*2 = 0xAF00 (+0xB000) per button icon
+  #define INFOBOX_MAX_SIZE         0x19000  // 360*140*2 = 0x189C0 (+0x19000)
+  #define SMALL_ICON_MAX_SIZE       0x2000  // 24*24*2 = 0x480 (+0x1000) per small icon
 #endif
 
 // The offset of the model preview icon in the gcode file

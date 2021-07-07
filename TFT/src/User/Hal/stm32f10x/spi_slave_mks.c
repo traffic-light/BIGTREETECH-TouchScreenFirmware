@@ -4,13 +4,13 @@
 #include "stdlib.h"
 #include "stm32f10x_conf.h"
 
-#if defined(MKS_32_V1_4)
+#if defined(MKS_TFT)
 
-#if defined(ST7920_SPI)
-//TODO:
-//now support SPI3 and PB1 CS only
-//more compatibility changes are needed
-//Config for SPI Channel
+#if defined(ST7920_EMULATOR)
+// TODO:
+// now support SPI3 and PB1 CS only
+// more compatibility changes are needed
+// Config for SPI Channel
 #if ST7920_SPI == _SPI1
   #define ST7920_SPI_NUM          SPI1
 #elif ST7920_SPI == _SPI2
@@ -54,9 +54,13 @@ void SPI_Slave(CIRCULAR_QUEUE *queue)
 
   NVIC_InitTypeDef NVIC_InitStructure;
 
-#ifndef SPI3_PIN_SMART_USAGE                                         // if enabled, it avoids any SPI3 CS pin usage and free the MISO (PB4 pin) for encoder pins
+#ifndef SPI3_PIN_SMART_USAGE                       // if enabled, it avoids any SPI3 CS pin usage and free the MISO (PB4 pin) for encoder pins
   SPI_GPIO_Init(ST7920_SPI);
-  GPIO_InitSet(SPI3_CS_PIN, MGPIO_MODE_IPU, 0);                      // CS
+  #ifdef MKS_TFT                                   // MKS TFTs already have an external pull-up resistor on PB0 and PB1 pins
+    GPIO_InitSet(SPI3_CS_PIN, MGPIO_MODE_IPN, 0);  // CS
+  #else
+    GPIO_InitSet(SPI3_CS_PIN, MGPIO_MODE_IPU, 0);  // CS
+  #endif
 #endif
 
   NVIC_InitStructure.NVIC_IRQChannel = SPI3_IRQn;
@@ -157,6 +161,6 @@ void EXTI1_IRQHandler(void)
 
   EXTI->PR = 1<<1;                                                   // Clear interrupt status register
 }
-#endif             // endif for #if defined(ST7920_SPI)
+#endif             // endif for #if defined(ST7920_EMULATOR)
 
-#endif             // endif for #if defined(MKS_32_V1_4)
+#endif             // endif for #if defined(MKS_TFT)

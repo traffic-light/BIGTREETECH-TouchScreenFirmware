@@ -15,7 +15,7 @@ typedef struct
   uint16_t wIndex;
   uint16_t rIndex;
   uint16_t count;
-}BUZZER;
+} BUZZER;
 
 typedef enum
 {
@@ -27,19 +27,20 @@ typedef enum
   sound_deny,
   sound_toast,
   sound_keypress,
-}SOUND;
-
+  sound_heated,
+  sound_cooled,
+} SOUND;
 
 void Buzzer_Config(void);
 void Buzzer_DeConfig(void);
-void Buzzer_TurnOn(const uint32_t frequency, const uint32_t duration);
+void Buzzer_TurnOn(const uint16_t frequency, const uint16_t duration);
 void Buzzer_play(SOUND sound);
 void loopBuzzer(void);
 
 #ifdef BUZZER_PIN
-#define BUZZER_PLAY(x) Buzzer_play(x)
+  #define BUZZER_PLAY(x) Buzzer_play(x)
 #else
-#define BUZZER_PLAY(x)
+  #define BUZZER_PLAY(x)
 #endif
 
 #ifdef __cplusplus

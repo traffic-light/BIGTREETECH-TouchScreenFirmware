@@ -1,23 +1,24 @@
 #include "Tuning.h"
 #include "includes.h"
 
+const MENUITEMS TuningItems = {
+  // title
+  LABEL_TUNING,
+  // icon                          label
+  {
+    {ICON_PID,                     LABEL_PID},
+    {ICON_TUNE_EXTRUDER,           LABEL_TUNE_EXTRUDER},
+    {ICON_PROBE_OFFSET,            LABEL_H_OFFSET},
+    {ICON_BACKGROUND,              LABEL_BACKGROUND},
+    {ICON_BACKGROUND,              LABEL_BACKGROUND},
+    {ICON_BACKGROUND,              LABEL_BACKGROUND},
+    {ICON_BACKGROUND,              LABEL_BACKGROUND},
+    {ICON_BACK,                    LABEL_BACK},
+  }
+};
+
 void menuTuning(void)
 {
-  // 1 title, ITEM_PER_PAGE items (icon + label)
-  const MENUITEMS TuningItems = {
-    // title
-    LABEL_TUNING,
-    // icon                         label
-    {{ICON_PID,                     LABEL_PID},
-     {ICON_TUNE_EXTRUDER,           LABEL_TUNE_EXTRUDER},
-     {ICON_BACKGROUND,              LABEL_BACKGROUND},
-     {ICON_BACKGROUND,              LABEL_BACKGROUND},
-     {ICON_BACKGROUND,              LABEL_BACKGROUND},
-     {ICON_BACKGROUND,              LABEL_BACKGROUND},
-     {ICON_BACKGROUND,              LABEL_BACKGROUND},
-     {ICON_BACK,                    LABEL_BACK},}
-  };
-
   KEY_VALUES key_num = KEY_IDLE;
 
   menuDrawPage(&TuningItems);
@@ -33,6 +34,12 @@ void menuTuning(void)
 
       case KEY_ICON_1:
         infoMenu.menu[++infoMenu.cur] = menuTuneExtruder;
+        break;
+
+      case KEY_ICON_2:
+        storeCmd("M206\n");
+        zOffsetSetMenu(false);  // use Home Offset menu
+        infoMenu.menu[++infoMenu.cur] = menuZOffset;
         break;
 
       case KEY_ICON_7:

@@ -1,11 +1,12 @@
 /**
-* Icon Keywords Generation
-* Usage: X_ICON(VALUE)
-* 'VALUE' is the keyword name without the 'ICON_'
-*
-* Description: https://en.wikipedia.org/wiki/X_Macro
-*/
-//after changing/adding/removing an icon, change the ICON_FLASH_SIGN in Settings.h
+ * Icon Keywords Generation
+ * Usage: X_ICON(VALUE)
+ * 'VALUE' is the keyword name without the 'ICON_'
+ *
+ * Description: https://en.wikipedia.org/wiki/X_Macro
+ *
+ * After changing/adding/removing an icon, change the ICON_FLASH_SIGN in Settings.h
+ */
 
 X_ICON (HEAT)
 X_ICON (MOVE)
@@ -16,6 +17,7 @@ X_ICON (EXTRUDE)
 X_ICON (FAN)
 X_ICON (SETTINGS)
 X_ICON (LEVELING)
+X_ICON (LEVEL_CORNER)
 X_ICON (Z_FADE)
 X_ICON (INC)
 X_ICON (DEC)
@@ -25,6 +27,7 @@ X_ICON (CHAMBER)
 X_ICON (1_DEGREE)
 X_ICON (5_DEGREE)
 X_ICON (10_DEGREE)
+X_ICON (APPLY)
 X_ICON (STOP)
 X_ICON (BACK)
 X_ICON (X_INC)
@@ -66,8 +69,7 @@ X_ICON (LANGUAGE)
 X_ICON (TOUCHSCREEN_ADJUST)
 X_ICON (MORE)
 X_ICON (SCREEN_INFO)
-X_ICON (BKCOLOR)
-X_ICON (FONTCOLOR)
+X_ICON (MARLIN_MODE)
 X_ICON (DISCONNECT)
 X_ICON (BAUD_RATE)
 X_ICON (PERCENTAGE)
@@ -139,5 +141,9 @@ X_ICON (TUNING)
 X_ICON (PID)
 X_ICON (TUNE_EXTRUDER)
 X_ICON (CONNECTION_SETTINGS)
-
+X_ICON (CASE_LIGHT)
+X_ICON (Z_ALIGN)
+X_ICON (MESH_EDITOR)
+X_ICON (BRIGHTNESS)
+X_ICON (MESH_VALID)
 //after changing/adding/removing an icon, change the ICON_FLASH_SIGN in Settings.h

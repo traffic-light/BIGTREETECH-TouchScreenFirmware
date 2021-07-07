@@ -1,115 +1,115 @@
 #include "FanControl.h"
+#include "includes.h"
 
-char*   fanID[MAX_FAN_COUNT];
-char*   fanCmd[MAX_FAN_COUNT];
-uint8_t fanType[MAX_FAN_COUNT];
+#define RRF_FAN_QUERY_MS  3000
+#define NEXT_FAN_WAIT 500  // 1 second is 1000
 
-static uint8_t fanSpeed[MAX_FAN_COUNT] = {0};
-static uint8_t lastFanSpeed[MAX_FAN_COUNT] = {0};
+const char* fanID[MAX_FAN_COUNT] = FAN_DISPLAY_ID;
+const char* fanCmd[MAX_FAN_COUNT] = FAN_CMD;
 
-static bool fan_send_waiting[MAX_FAN_COUNT] = {false};
-static bool fanQueryWait = false;
-static bool fanQueryEnable = false;
+static uint8_t setFanSpeed[MAX_FAN_COUNT] = {0};
+static uint8_t lastSetFanSpeed[MAX_FAN_COUNT] = {0};
+static uint8_t curFanSpeed[MAX_FAN_COUNT] = {0};
 
-uint8_t fanGetTypID(uint8_t startIndex, uint8_t type) {
-  for(uint8_t i = startIndex; i < MAX_FAN_COUNT; i++) {
-    if(fanType[i] == type) return i;
-  }
-  return FAN_TYPE_UNKNOWN;
-}
+static bool ctrlFanQueryWait = false;
+static uint32_t nextCtrlFanTime = 0;
 
-void fanBuildList(void)
+// Check whether the index is a valid fan index.
+bool fanIsValid(uint8_t index)
 {
-  char* fanIDTemp[MAX_FAN_COUNT] = FAN_DISPLAY_ID;
-  char* fanCmdTemp[MAX_FAN_COUNT] = FAN_CMD;
-  uint8_t fanTypeTemp[MAX_FAN_COUNT] = FAN_TYPE;
-
-  for (uint8_t i = 0, j=0; i < MAX_FAN_COUNT; i++,j++)
-  {
-    if( infoSettings.fan_count == i ) {
-      if( infoSettings.fan_ctrl_count > 0 ) i= (MAX_FAN_COUNT - MAX_FAN_CTRL_COUNT);
-      else i= MAX_FAN_COUNT;
-    }
-    if(i < MAX_FAN_COUNT) {
-      memcpy(fanID+j, fanIDTemp+i, sizeof(fanIDTemp[i]));
-      memcpy(fanCmd+j, fanCmdTemp+i, sizeof(fanCmdTemp[i]));
-      memcpy(fanType+j, fanTypeTemp+i, sizeof(fanTypeTemp[i]));
-    }
-  }
-}
-
-void fanControlInit(void) {
-  fanBuildList();
-
-  fanQueryEnable = 
-    ( infoSettings.fan_ctrl_count > 0 && 
-      (fanGetTypID( infoSettings.fan_count -1,FAN_TYPE_CTRL_I ) || 
-       fanGetTypID( infoSettings.fan_count -1,FAN_TYPE_CTRL_S ) ) 
-    );
-}
-
-bool fanIsType(uint8_t i, uint8_t type) {
-  return (fanType[i] == type);
+  if (index >= infoSettings.fan_count && index < MAX_COOLING_FAN_COUNT)  // invalid cooling fan index
+    return false;
+  else if (!infoSettings.ctrl_fan_en && index >= MAX_COOLING_FAN_COUNT)  // controller cooling fan is disabled
+    return false;
+  else if (index >= (MAX_COOLING_FAN_COUNT + MAX_CRTL_FAN_COUNT))  // invalid controller cooling fan index (not active/idle)
+    return false;
+  else
+    return true;
 }
 
 void fanSetSpeed(uint8_t i, uint8_t speed)
 {
-  fanSpeed[i] = speed;
+  setFanSpeed[i] = speed;
 }
 
-uint8_t fanGetSpeed(uint8_t i)
+uint8_t fanGetSetSpeed(uint8_t i)
 {
-  return fanSpeed[i];
+  return setFanSpeed[i];
 }
 
-void fanSetSpeedPercent(uint8_t i, uint8_t percent)
+void fanSetPercent(uint8_t i, uint8_t percent)
 {
   percent = NOBEYOND(0, percent, 100);
-  fanSpeed[i] = (percent * infoSettings.fan_max[i]) / 100;
+  setFanSpeed[i] = (percent * infoSettings.fan_max[i]) / 100;
 }
 
-uint8_t fanGetSpeedPercent(uint8_t i)
+uint8_t fanGetSetPercent(uint8_t i)
 {
-  return (fanSpeed[i] * 100.0f) / infoSettings.fan_max[i] + 0.5f;
+  return (setFanSpeed[i] * 100.0f) / infoSettings.fan_max[i] + 0.5f;
 }
 
-void fanSetSendWaiting(uint8_t i, bool isWaiting)
+void fanSetCurSpeed(uint8_t i, uint8_t speed)
 {
-  fan_send_waiting[i] = isWaiting;
+  curFanSpeed[i] = speed;
 }
 
-void fanSpeedQuerySetWait(bool wait)
+uint8_t fanGetCurSpeed(uint8_t i)
 {
-  fanQueryWait = wait;
+  return curFanSpeed[i];
+}
+
+void fanSetCurPercent(uint8_t i, uint8_t percent)
+{
+  percent = NOBEYOND(0, percent, 100);
+  curFanSpeed[i] = (percent * infoSettings.fan_max[i]) / 100;
+}
+
+uint8_t fanGetCurPercent(uint8_t i)
+{
+  return (curFanSpeed[i] * 100.0f) / infoSettings.fan_max[i] + 0.5f;
 }
 
 void loopFan(void)
 {
-  for (uint8_t i = 0; i < (infoSettings.fan_count + infoSettings.fan_ctrl_count); i++)
+  for (uint8_t i = 0; i < MAX_FAN_COUNT; i++)
   {
-    if (lastFanSpeed[i] != fanSpeed[i])
+    if ((lastSetFanSpeed[i] != setFanSpeed[i]) && (OS_GetTimeMs() > nextCtrlFanTime))
     {
-      lastFanSpeed[i] = fanSpeed[i];
-      if(fan_send_waiting[i] == false)
-      {
-        fan_send_waiting[i] = true;
-        if(fanIsType(i,FAN_TYPE_F) || fanIsType(i,FAN_TYPE_CTRL_S)) {
-          storeCmd("%s S%d\n", fanCmd[i],fanSpeed[i]);
-        } 
-        else if (fanIsType(i,FAN_TYPE_CTRL_I)) {
-          storeCmd("%s I%d\n", fanCmd[i],fanSpeed[i]);
-        }
-      }
+      if (storeCmd(fanCmd[i], setFanSpeed[i]))
+        lastSetFanSpeed[i] = setFanSpeed[i];
+
+      nextCtrlFanTime = OS_GetTimeMs() + NEXT_FAN_WAIT;  // avoid rapid fire, clogging the queue
     }
   }
 }
 
-void fanSpeedQuery(void)
+void ctrlFanQuerySetWait(bool wait)
 {
-  if( fanQueryEnable && infoHost.connected && 
-      !infoHost.wait && !fanQueryWait )
-  { 
-    storeCmd("M710\n");
-    fanQueryWait = true;
+  ctrlFanQueryWait = wait;
+}
+
+// query for controller fan only
+void ctrlFanQuery(void)
+{
+  if (infoHost.connected && !infoHost.wait && !ctrlFanQueryWait && infoSettings.ctrl_fan_en)
+  {
+    ctrlFanQueryWait = storeCmd("M710\n");
+  }
+}
+
+void fanQuery(void)
+{
+  if (!infoHost.connected)
+    return;
+
+  if (infoMachineSettings.firmwareType == FW_REPRAPFW)
+  {
+    static uint32_t rrf_next_fan_time = 0;
+
+    if (OS_GetTimeMs() > rrf_next_fan_time)
+    {
+      rrf_next_fan_time = OS_GetTimeMs() + RRF_FAN_QUERY_MS;
+      storeCmd("M408 S0\n");
+    }
   }
 }
